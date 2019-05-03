@@ -13,7 +13,7 @@ int main( void )
 	int x; int y;
 
 
-	x = input((); y = input();
+	x = input(); y = input();
 	output(gcd(x,y));
 
 	return 0;
