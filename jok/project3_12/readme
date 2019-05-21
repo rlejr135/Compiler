@@ -1,0 +1,9 @@
+compile : make
+run : ./project3_12 test.c
+
+test file: test.c
+
+
+
+scope check : symbol.c
+type check : type.c

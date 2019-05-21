@@ -52,28 +52,29 @@ static void insertNode( TreeNode * t)
       	switch (t->kind.stmt)
       	{ 
 					case CompoundK:
+						curr_scope_level += 1;
 						break;
 							
-        	case ExpressionK:
-          	if (st_lookup(t->attr.name) == -1)
-          		/* not yet in table, so treat as new definition */
-            	st_insert(t->attr.name,t->lineno,location++);
+        	case ExpressionK:					
+/*          	if (st_lookup(t->attr.name) == -1)
+          		// not yet in table, so treat as new definition 
+            	st_insert(t->attr.name,t->lineno,location++,);
           	else
-          	/* already in table, so ignore location, 
-            	 add line number of use only */ 
+          	// already in table, so ignore location, 
+            // 	 add line number of use only 
             	st_insert(t->attr.name,t->lineno,0);
-          	break;
+*/        	break;
 						
-					case SelectionK:
+					case SelectionK:					// do not use
 						break;
 
-					case IterationK:
+					case IterationK:					// do not use
 						break;
 
-					case ReturnK:
+					case ReturnK:							// do not use
 						break;
 
-					case ElseK:
+					case ElseK:								// do not use
 						break;
 
         	default:
@@ -88,20 +89,20 @@ static void insertNode( TreeNode * t)
 					case IdK:
           	if (st_lookup(t->attr.name) == -1)
           	/* not yet in table, so treat as new definition */
-            	st_insert(t->attr.name,t->lineno,location++);
+//            	st_insert(t->attr.name,t->lineno,location++);
           	else
           	/* already in table, so ignore location, 
             	 add line number of use only */ 
-            	st_insert(t->attr.name,t->lineno,0);
+//            	st_insert(t->attr.name,t->lineno,0);
           	break;
 
-					case OpK:
+					case OpK:								// do not use
 						break;
 
-					case ConstK:
+					case ConstK:						// do not use
 						break;
 
-					case AssignK:
+					case AssignK:						// do not use
 						break;
 
 					case IdarrayK:

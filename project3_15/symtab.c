@@ -50,19 +50,69 @@ typedef struct BucketListRec
      LineList lines;
      int memloc ; /* memory location for variable */
      struct BucketListRec * next;
+		 int vpf;
+		 int is_array;
+		 int arrsize;
+		 int type;
    } * BucketList;
 
 /* the hash table */
-static BucketList hashTable[SIZE];
+//static BucketList hashTable[SIZE];
+
+
+
+
+
+//**** add for proj3 ****//
+
+typedef struct ScopeListRec{
+			int scope_level;
+
+			BucketList hashTable[SIZE];
+
+			struct ScopeListRec * parent;
+			struct ScopeListRec * sibling;
+			struct ScopeListRec * child;
+} * ScopeList;
+
+static ScopeList head_scope;
+ScopeList curr_scope;
+
+static int curr_scope_level = 0;
+
+head_scope = NULL;
+curr_scope = head_scope;
+
+
+
+#define VAR 0
+#define PARAM 1
+#define FUNC 2
+
+#define IS_ARRAY 1
+#define NOT_ARRAY 0
+
+#define TYPE_INT 0
+#define TYPE_VOID 1
+#define TYPE_ARRAY 2
+
+///////////////////////////
+
+
+
+
+
+
 
 /* Procedure st_insert inserts line numbers and
  * memory locations into the symbol table
  * loc = memory location is inserted only the
  * first time, otherwise ignored
  */
-void st_insert( char * name, int lineno, int loc )
+void st_insert( char * name, int lineno, int loc, int VPF, int is_array, int arrsize, int type )
 { int h = hash(name);
-  BucketList l =  hashTable[h];
+  BucketList l =  curr_scope->hashTable[h];
+
   while ((l != NULL) && (strcmp(name,l->name) != 0))
     l = l->next;
   if (l == NULL) /* variable not yet in table */
@@ -73,7 +123,15 @@ void st_insert( char * name, int lineno, int loc )
     l->memloc = loc;
     l->lines->next = NULL;
     l->next = hashTable[h];
-    hashTable[h] = l; }
+
+		// **** add proj3 **** //
+		l->vpf = VPF;
+		l->is_array = is_array;
+		l->arrsize = arrsize;
+		l->type = type;
+		////////////////////////
+
+    curr_scope->hashTable[h] = l; }
   else /* found in table, so just add line number */
   { LineList t = l->lines;
     while (t->next != NULL) t = t->next;
@@ -88,7 +146,8 @@ void st_insert( char * name, int lineno, int loc )
  */
 int st_lookup ( char * name )
 { int h = hash(name);
-  BucketList l =  hashTable[h];
+  BucketList l =  curr_scope->hashTable[h];
+
   while ((l != NULL) && (strcmp(name,l->name) != 0))
     l = l->next;
   if (l == NULL) return -1;
