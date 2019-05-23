@@ -27,6 +27,10 @@ static void traverse( TreeNode * t,
       for (i=0; i < MAXCHILDREN; i++)
         traverse(t->child[i],preProc,postProc);
     }
+		// **** If exit Compound stmt, scope level down **** //
+		if (t->kind.stmt == CompoundK){
+				st_scope_back();
+		}
     postProc(t);
     traverse(t->sibling,preProc,postProc);
   }
@@ -52,7 +56,7 @@ static void insertNode( TreeNode * t)
       	switch (t->kind.stmt)
       	{ 
 					case CompoundK:
-						curr_scope_level += 1;
+						st_make_new_scope(0);
 						break;
 							
         	case ExpressionK:					
@@ -87,13 +91,9 @@ static void insertNode( TreeNode * t)
       	switch (t->kind.exp)
       	{ 
 					case IdK:
-          	if (st_lookup(t->attr.name) == -1)
-          	/* not yet in table, so treat as new definition */
-//            	st_insert(t->attr.name,t->lineno,location++);
-          	else
-          	/* already in table, so ignore location, 
-            	 add line number of use only */ 
-//            	st_insert(t->attr.name,t->lineno,0);
+          	if (st_lookup(t->attr.name) != -1){
+            		st_insert(t->attr.name,t->lineno,0, VAR, NOT_ARRAY, 0, TYPE_INT);
+						}
           	break;
 
 					case OpK:								// do not use
@@ -106,15 +106,29 @@ static void insertNode( TreeNode * t)
 						break;
 
 					case IdarrayK:
+									if (st_lookup((t->child[0])->attr.name) == -1){
+											printf ("error, no dec and use\n");
+									}
+									else{
+											st_insert((t->child[0])->attr.name, (t->child[0])->lineno, 0, 0, 0, 0, 0);
+									}
+
 						break;
 
 					case TypeK:
 						break;
 
 					case ParamK:
+
 						break;
 
 					case CallK:
+								if (st_lookup(t->attr.name) == -1){
+											printf("error, no dec and use\n");
+								}
+								else{
+											st_insert(t->attr.name, t->lineno, 0, 0, 0, 0, 0);
+								}
 						break;
 
         	default:
@@ -126,16 +140,35 @@ static void insertNode( TreeNode * t)
 		case DecK:
 				switch(t->kind.dec){
 							case IntK:
+							case LocalK:
+									if (st_lookup((t->child[1])->attr.name) == -1){
+											st_insert((t->child[1])->attr.name, (t->child[1])->lineno, location++, VAR, NOT_ARRAY, 0, TYPE_INT);
+									}
+									else{
+											st_insert((t->child[1])->attr.name, (t->child[1])->lineno, 0, VAR, NOT_ARRAY, 0, TYPE_INT);
+									}
 									break;
 
 							case ArrayK:
+									if (st_lookup((t->child[1])->attr.name) == -1){
+											st_insert((t->child[1])->attr.name, (t->child[1])->lineno, location++, VAR, IS_ARRAY, (t->child[2])->attr.val, TYPE_ARRAY);
+									}
+									else{
+											st_insert((t->child[1])->attr.name, (t->child[1])->lineno, 0, VAR, IS_ARRAY, (t->child[2])->attr.val, TYPE_ARRAY);
+									}
 									break;
 
 							case FunK:
+									if (st_lookup((t->child[1])->attr.name) == -1){
+											st_insert((t->child[1])->attr.name, (t->child[1])->lineno, location++, FUNC, NOT_ARRAY, 0, TYPE_INT);
+									}
+									else{
+											st_insert((t->child[1])->attr.name, (t->child[1])->lineno, 0, FUNC, NOT_ARRAY, 0, TYPE_INT);
+									}
 									break;
 
-							case LocalK:
-									break;
+//							case LocalK:
+//									break;
 
 							default:
 									break;
@@ -152,7 +185,13 @@ static void insertNode( TreeNode * t)
  * table by preorder traversal of the syntax tree
  */
 void buildSymtab(TreeNode * syntaxTree)
-{ traverse(syntaxTree,insertNode,nullProc);
+{
+	//**** add proj3 ****//
+	
+	st_scope_init();
+
+	//////////////////////
+	traverse(syntaxTree,insertNode,nullProc);
   if (TraceAnalyze)
   { fprintf(listing,"\nSymbol table:\n\n");
     printSymTab(listing);

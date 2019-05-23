@@ -27,4 +27,40 @@ int st_lookup ( char * name );
  */
 void printSymTab(FILE * listing);
 
+
+// **** proj3 add **** //
+
+// **** csflag -> make child scope or make sibling scope **** //
+// **** make new scope list and change curr_scope.				**** //
+
+void st_make_new_scope(int csflag);		 	
+					
+
+// make head scope
+void st_scope_init();
+
+
+// **** scope go back(go now scope's parent) ****//
+
+void st_scope_back();
+
+
+#define VAR 0
+#define PARAM 1
+#define FUNC 2
+
+#define IS_ARRAY 1
+#define NOT_ARRAY 0
+
+#define TYPE_INT 0
+#define TYPE_VOID 1
+#define TYPE_ARRAY 2
+
+#define CS_CHILD 0
+#define CS_SIBLING 1
+
+
+
+/////////////////////////
+
 #endif
