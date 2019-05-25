@@ -67,7 +67,6 @@ typedef struct BucketListRec
 
 typedef struct ScopeListRec{
 			int scope_level;
-			char *func_name;
 
 			BucketList hashTable[SIZE];
 
@@ -208,7 +207,6 @@ void st_make_new_scope(int csflag){
 	// **** Increase scope level **** //
 
 	temp->scope_level = ++curr_scope_level;
-	printf("%d\n", curr_scope_level);
 	// **** If now scope's child is NULL, simple connect **** //
 	if (curr_scope->child == NULL){
 			curr_scope->child = temp;
@@ -229,13 +227,6 @@ void st_make_new_scope(int csflag){
 			temp->sibling = NULL;
 	}
 
-	if (csflag == 1){
-			temp->func_name = func_name;		
-	}
-	else{
-			temp->func_name = NULL;
-	}
-
 	curr_scope = temp;
 }
 
@@ -246,7 +237,6 @@ void st_scope_init(){
 	head->child = NULL;
 	head->sibling = NULL;
 	head->scope_level = curr_scope_level;
-	head->func_name = NULL;
 	head_scope = head;
 	curr_scope = head_scope;
 }
@@ -256,20 +246,6 @@ void st_scope_back(){
 	if (curr_scope->parent != NULL){
 			curr_scope = curr_scope->parent;
 			curr_scope_level -= 1;
-	}
-}
-
-void st_scope_go_child(){
-	ScopeList walk;
-	if (curr_scope->child != NULL){
-			// func_name 
-			walk = curr_scope->child;
-
-			while (strcmp(walk->func_name, func_name) != 0){
-						walk = walk->sibling;
-			}
-			curr_scope = walk;
-			curr_scope_level += 1;
 	}
 }
 

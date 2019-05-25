@@ -10,7 +10,6 @@
 #include "symtab.h"
 #include "analyze.h"
 
-											extern int curr_scope_level;
 /* counter for variable memory locations */
 static int location = 0;
 
@@ -64,8 +63,7 @@ static void insertNode( TreeNode * t)
 								first_param_flag = FALSE;
 						}
 						else{
-								st_make_new_scope(func_param_flag);
-				//				func_param_flag = PARAM_FLAG_OFF;
+								st_make_new_scope(0);
 						}
 						break;
 							
@@ -98,12 +96,6 @@ static void insertNode( TreeNode * t)
             		st_insert(t->attr.name,t->lineno,0, VAR, NOT_ARRAY, 0, TYPE_INT);
 						}
 
-						if (func_param_flag == PARAM_FLAG_ON){
-								char *tmp = (char*)malloc(sizeof(char) * strlen(t->attr.name));
-								strcpy(tmp, t->attr.name);
-  
-								func_name = tmp;
-						}
           	break;
 
 					case OpK:								// do not use

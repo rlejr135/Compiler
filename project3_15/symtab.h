@@ -44,7 +44,6 @@ void st_scope_init();
 void st_scope_back();
 
 // **** go now scope's child **** //
-void st_scope_go_child();
 
 int st_lookup_curr_scope(char * name);
 
@@ -60,8 +59,6 @@ int st_lookup_curr_scope(char * name);
 #define TYPE_VOID 1
 #define TYPE_ARRAY 2
 
-
-extern char* func_name;
 
 /////////////////////////
 
