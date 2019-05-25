@@ -58,19 +58,19 @@ static void insertNode( TreeNode * t)
       	switch (t->kind.stmt)
       	{ 
 					case CompoundK:
-						st_make_new_scope(func_param_flag);
-						func_param_flag = PARAM_FLAG_OFF;
+
+						if (func_flag == TRUE){
+								func_flag = FALSE;
+								first_param_flag = FALSE;
+						}
+						else{
+								st_make_new_scope(func_param_flag);
+				//				func_param_flag = PARAM_FLAG_OFF;
+						}
 						break;
 							
-        	case ExpressionK:					
-/*          	if (st_lookup(t->attr.name) == -1)
-          		// not yet in table, so treat as new definition 
-            	st_insert(t->attr.name,t->lineno,location++,);
-          	else
-          	// already in table, so ignore location, 
-            // 	 add line number of use only 
-            	st_insert(t->attr.name,t->lineno,0);
-*/        	break;
+        	case ExpressionK:					// do not use
+	        	break;
 						
 					case SelectionK:					// do not use
 						break;
@@ -130,9 +130,13 @@ static void insertNode( TreeNode * t)
 
 					case ParamK:
 						if (t->child[0] == NULL) break;
+						if (first_param_flag == FALSE ){
+								first_param_flag = TRUE;
+
+								st_make_new_scope(0);
+						}
 					
 
-						st_scope_go_child();
 						if (t->child[2] != NULL){ // array parameter
 								st_insert((t->child[1])->attr.name, (t->child[1])->lineno, 0, PARAM, IS_ARRAY, 0, TYPE_ARRAY);
 						}
@@ -140,7 +144,6 @@ static void insertNode( TreeNode * t)
 								st_insert((t->child[1])->attr.name, (t->child[1])->lineno, 0, PARAM, NOT_ARRAY, 0, TYPE_INT);
 						}
 						
-						st_scope_back();
 						break;
 
 					case CallK:
@@ -166,7 +169,6 @@ static void insertNode( TreeNode * t)
 											st_insert((t->child[1])->attr.name, (t->child[1])->lineno, location++, VAR, NOT_ARRAY, 0, TYPE_INT);
 									}
 									else{
-		//									st_insert((t->child[1])->attr.name, (t->child[1])->lineno, 0, VAR, NOT_ARRAY, 0, TYPE_INT);
 									}
 									break;
 
@@ -175,7 +177,6 @@ static void insertNode( TreeNode * t)
 											st_insert((t->child[1])->attr.name, (t->child[1])->lineno, location++, VAR, IS_ARRAY, (t->child[2])->attr.val, TYPE_ARRAY);
 									}
 									else{
-	//										st_insert((t->child[1])->attr.name, (t->child[1])->lineno, 0, VAR, IS_ARRAY, (t->child[2])->attr.val, TYPE_ARRAY);
 									}
 									break;
 
@@ -189,13 +190,12 @@ static void insertNode( TreeNode * t)
 												st_insert((t->child[1])->attr.name, (t->child[1])->lineno, location++, FUNC, NOT_ARRAY, 0, TYPE_VOID);
 									}
 									else{
-/*											if (t->child[0]->type == Integer)
-												st_insert((t->child[1])->attr.name, (t->child[1])->lineno, 0, FUNC, NOT_ARRAY, 0, TYPE_INT);
-											else if (t->child[0]->type == Void)
-												st_insert((t->child[1])->attr.name, (t->child[1])->lineno, 0, FUNC, NOT_ARRAY, 0, TYPE_VOID);
-	*/								}
 
-									func_param_flag = PARAM_FLAG_ON;
+									}
+
+									if (t->child[2]->child[0] != NULL)
+											func_flag = TRUE;
+
 									break;
 
 //							case LocalK:
@@ -220,7 +220,8 @@ void buildSymtab(TreeNode * syntaxTree)
 	//**** add proj3 ****//
 	
 	st_scope_init();
-	func_param_flag = PARAM_FLAG_OFF;
+	func_flag = FALSE;
+	first_param_flag = FALSE;
 
 	//////////////////////
 	traverse(syntaxTree,insertNode,nullProc);

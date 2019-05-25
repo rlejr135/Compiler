@@ -18,10 +18,11 @@ void buildSymtab(TreeNode *);
  */
 void typeCheck(TreeNode *);
 
-static int func_param_flag;
-char *func_name;
 
-#define PARAM_FLAG_ON 1
-#define PARAM_FLAG_OFF 0
+static int func_flag;
+static int first_param_flag;
+
+#define TRUE 1
+#define FALSE 0
 
 #endif
