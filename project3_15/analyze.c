@@ -10,6 +10,7 @@
 #include "symtab.h"
 #include "analyze.h"
 
+											extern int curr_scope_level;
 /* counter for variable memory locations */
 static int location = 0;
 
@@ -28,12 +29,13 @@ static void traverse( TreeNode * t,
         traverse(t->child[i],preProc,postProc);
     }
 		// **** If exit Compound stmt, scope level down **** //
-		if (t->kind.stmt == CompoundK){
+		if (t->nodekind == StmtK && t->kind.stmt == CompoundK ){
 				st_scope_back();
 		}
+
     postProc(t);
     traverse(t->sibling,preProc,postProc);
-  }
+	  }
 }
 
 /* nullProc is a do-nothing procedure to 
@@ -56,7 +58,8 @@ static void insertNode( TreeNode * t)
       	switch (t->kind.stmt)
       	{ 
 					case CompoundK:
-						st_make_new_scope(0);
+						st_make_new_scope(func_param_flag);
+						func_param_flag = PARAM_FLAG_OFF;
 						break;
 							
         	case ExpressionK:					
@@ -94,6 +97,13 @@ static void insertNode( TreeNode * t)
           	if (st_lookup(t->attr.name) != -1){
             		st_insert(t->attr.name,t->lineno,0, VAR, NOT_ARRAY, 0, TYPE_INT);
 						}
+
+						if (func_param_flag == PARAM_FLAG_ON){
+								char *tmp = (char*)malloc(sizeof(char) * strlen(t->attr.name));
+								strcpy(tmp, t->attr.name);
+  
+								func_name = tmp;
+						}
           	break;
 
 					case OpK:								// do not use
@@ -119,7 +129,18 @@ static void insertNode( TreeNode * t)
 						break;
 
 					case ParamK:
+						if (t->child[0] == NULL) break;
+					
 
+						st_scope_go_child();
+						if (t->child[2] != NULL){ // array parameter
+								st_insert((t->child[1])->attr.name, (t->child[1])->lineno, 0, PARAM, IS_ARRAY, 0, TYPE_ARRAY);
+						}
+						else{
+								st_insert((t->child[1])->attr.name, (t->child[1])->lineno, 0, PARAM, NOT_ARRAY, 0, TYPE_INT);
+						}
+						
+						st_scope_back();
 						break;
 
 					case CallK:
@@ -141,30 +162,40 @@ static void insertNode( TreeNode * t)
 				switch(t->kind.dec){
 							case IntK:
 							case LocalK:
-									if (st_lookup((t->child[1])->attr.name) == -1){
+									if (st_lookup_curr_scope((t->child[1])->attr.name) == -1){
 											st_insert((t->child[1])->attr.name, (t->child[1])->lineno, location++, VAR, NOT_ARRAY, 0, TYPE_INT);
 									}
 									else{
-											st_insert((t->child[1])->attr.name, (t->child[1])->lineno, 0, VAR, NOT_ARRAY, 0, TYPE_INT);
+		//									st_insert((t->child[1])->attr.name, (t->child[1])->lineno, 0, VAR, NOT_ARRAY, 0, TYPE_INT);
 									}
 									break;
 
 							case ArrayK:
-									if (st_lookup((t->child[1])->attr.name) == -1){
+									if (st_lookup_curr_scope((t->child[1])->attr.name) == -1){
 											st_insert((t->child[1])->attr.name, (t->child[1])->lineno, location++, VAR, IS_ARRAY, (t->child[2])->attr.val, TYPE_ARRAY);
 									}
 									else{
-											st_insert((t->child[1])->attr.name, (t->child[1])->lineno, 0, VAR, IS_ARRAY, (t->child[2])->attr.val, TYPE_ARRAY);
+	//										st_insert((t->child[1])->attr.name, (t->child[1])->lineno, 0, VAR, IS_ARRAY, (t->child[2])->attr.val, TYPE_ARRAY);
 									}
 									break;
 
 							case FunK:
-									if (st_lookup((t->child[1])->attr.name) == -1){
-											st_insert((t->child[1])->attr.name, (t->child[1])->lineno, location++, FUNC, NOT_ARRAY, 0, TYPE_INT);
+
+									if (st_lookup_curr_scope((t->child[1])->attr.name) == -1){
+
+											if (t->child[0]->type == Integer)
+												st_insert((t->child[1])->attr.name, (t->child[1])->lineno, location++, FUNC, NOT_ARRAY, 0, TYPE_INT);
+											else if (t->child[0]->type == Void)
+												st_insert((t->child[1])->attr.name, (t->child[1])->lineno, location++, FUNC, NOT_ARRAY, 0, TYPE_VOID);
 									}
 									else{
-											st_insert((t->child[1])->attr.name, (t->child[1])->lineno, 0, FUNC, NOT_ARRAY, 0, TYPE_INT);
-									}
+/*											if (t->child[0]->type == Integer)
+												st_insert((t->child[1])->attr.name, (t->child[1])->lineno, 0, FUNC, NOT_ARRAY, 0, TYPE_INT);
+											else if (t->child[0]->type == Void)
+												st_insert((t->child[1])->attr.name, (t->child[1])->lineno, 0, FUNC, NOT_ARRAY, 0, TYPE_VOID);
+	*/								}
+
+									func_param_flag = PARAM_FLAG_ON;
 									break;
 
 //							case LocalK:
@@ -189,6 +220,7 @@ void buildSymtab(TreeNode * syntaxTree)
 	//**** add proj3 ****//
 	
 	st_scope_init();
+	func_param_flag = PARAM_FLAG_OFF;
 
 	//////////////////////
 	traverse(syntaxTree,insertNode,nullProc);

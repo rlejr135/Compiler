@@ -120,8 +120,8 @@ fun_declaration		: type_specifier ID
 													t = newExpNode(IdK);
 													$$ = newDecNode(FunK);
 													$$->child[0] = $1;
-													$$->child[2] = $5;
-													$$->child[3] = $7;
+													$$->child[2] = $7;
+													$$->child[3] = $5;
 													t->attr.name = savedName[--now_level];
 													t->lineno = savedLineNo[now_level];
 													$$->child[1] = t;
@@ -164,6 +164,7 @@ param 						: type_specifier ID
 													$$->child[0] = $1;
 													$$->child[1] = new;
 													new->attr.name = copyString(beforeToken);
+													new->lineno = lineno;
 										}
 									| type_specifier ID 
 										{

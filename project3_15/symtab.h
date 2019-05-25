@@ -40,9 +40,13 @@ void st_make_new_scope(int csflag);
 void st_scope_init();
 
 
-// **** scope go back(go now scope's parent) ****//
-
+// **** scope go back(go now scope's parent) **** //
 void st_scope_back();
+
+// **** go now scope's child **** //
+void st_scope_go_child();
+
+int st_lookup_curr_scope(char * name);
 
 
 #define VAR 0
@@ -56,10 +60,8 @@ void st_scope_back();
 #define TYPE_VOID 1
 #define TYPE_ARRAY 2
 
-#define CS_CHILD 0
-#define CS_SIBLING 1
 
-
+extern char* func_name;
 
 /////////////////////////
 

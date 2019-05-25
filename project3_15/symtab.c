@@ -67,6 +67,7 @@ typedef struct BucketListRec
 
 typedef struct ScopeListRec{
 			int scope_level;
+			char *func_name;
 
 			BucketList hashTable[SIZE];
 
@@ -78,7 +79,7 @@ typedef struct ScopeListRec{
 ScopeList head_scope;
 ScopeList curr_scope;
 
-static int curr_scope_level = 0;
+int curr_scope_level = 0;
 
 ///////////////////////////
 
@@ -98,6 +99,9 @@ void st_insert( char * name, int lineno, int loc, int VPF, int is_array, int arr
   BucketList l =  curr_scope->hashTable[h];
 	ScopeList walk = curr_scope;
 
+	printf("[%s] [%d]\n", name, lineno);
+
+	if (loc == 0){
 	while (1){
 		  while ((l != NULL) && (strcmp(name,l->name) != 0))
 		    l = l->next;
@@ -109,6 +113,10 @@ void st_insert( char * name, int lineno, int loc, int VPF, int is_array, int arr
 					continue;
 			}
 			break;
+	}
+	}
+	else{
+		l = NULL;
 	}
   if (l == NULL) /* variable not yet in table */
   { l = (BucketList) malloc(sizeof(struct BucketListRec));
@@ -128,12 +136,20 @@ void st_insert( char * name, int lineno, int loc, int VPF, int is_array, int arr
 
     curr_scope->hashTable[h] = l; }
   else /* found in table, so just add line number */
-  { LineList t = l->lines;
+  { LineList t = l->lines, tmp;
 
 		// **** If lineno is already exist, ignore **** //
 		if (t->lineno == lineno) return;
     while (t->next != NULL){ 
 				if (t->next->lineno == lineno) return;
+				if (t->next->lineno > lineno){
+							tmp = (LineList) malloc(sizeof(struct LineListRec));
+							tmp->lineno = lineno;
+							tmp->next = t->next;
+							t->next = tmp;
+							return;
+				}
+
 				t = t->next;
 		}
     t->next = (LineList) malloc(sizeof(struct LineListRec));
@@ -147,6 +163,8 @@ void st_insert( char * name, int lineno, int loc, int VPF, int is_array, int arr
  */
 int st_lookup ( char * name )
 { int h = hash(name);
+
+
 	ScopeList search = curr_scope;
 
 	// **** lookup name, if not exist, go parent scope and re - find **** //
@@ -163,6 +181,17 @@ int st_lookup ( char * name )
 			else { return l->memloc; }
 	}
 }
+int st_lookup_curr_scope( char * name){
+	int h = hash(name);
+	BucketList l = curr_scope->hashTable[h];
+
+	while((l != NULL) && (strcmp(name, l->name) != 0)){
+				l = l->next;
+	}
+
+	if (l == NULL) return -1;
+	else return l->memloc;
+}
 
 
 
@@ -170,13 +199,16 @@ int st_lookup ( char * name )
 
 void st_make_new_scope(int csflag){
 	ScopeList temp, search_t;
+	
 
+	// **** flag == 1 function compound **** //
+	// **** flag == 0 ignore **** //
 	temp = (ScopeList)malloc(sizeof(struct ScopeListRec));
 
 	// **** Increase scope level **** //
 
 	temp->scope_level = ++curr_scope_level;
-
+	printf("%d\n", curr_scope_level);
 	// **** If now scope's child is NULL, simple connect **** //
 	if (curr_scope->child == NULL){
 			curr_scope->child = temp;
@@ -197,6 +229,13 @@ void st_make_new_scope(int csflag){
 			temp->sibling = NULL;
 	}
 
+	if (csflag == 1){
+			temp->func_name = func_name;		
+	}
+	else{
+			temp->func_name = NULL;
+	}
+
 	curr_scope = temp;
 }
 
@@ -207,6 +246,7 @@ void st_scope_init(){
 	head->child = NULL;
 	head->sibling = NULL;
 	head->scope_level = curr_scope_level;
+	head->func_name = NULL;
 	head_scope = head;
 	curr_scope = head_scope;
 }
@@ -216,6 +256,20 @@ void st_scope_back(){
 	if (curr_scope->parent != NULL){
 			curr_scope = curr_scope->parent;
 			curr_scope_level -= 1;
+	}
+}
+
+void st_scope_go_child(){
+	ScopeList walk;
+	if (curr_scope->child != NULL){
+			// func_name 
+			walk = curr_scope->child;
+
+			while (strcmp(walk->func_name, func_name) != 0){
+						walk = walk->sibling;
+			}
+			curr_scope = walk;
+			curr_scope_level += 1;
 	}
 }
 
@@ -235,15 +289,34 @@ void printSymTab(FILE * listing)
 
 	// **** Print symtab repetition **** //
 	while(1){
-			fprintf(listing,"Variable Name  Location   Line Numbers\n");
-			fprintf(listing,"-------------  --------   ------------\n");
+			fprintf(listing,"Name    Scope   Loc     V/P/F   Array?  ArrSize Type    Line Numbers\n");
+			fprintf(listing,"--------------------------------------------------------------------\n");
 			for (i=0;i<SIZE;++i)
 			{ if (walk->hashTable[i] != NULL)
 				{ BucketList l = walk->hashTable[i];
 					while (l != NULL)
 					{ LineList t = l->lines;
-						fprintf(listing,"%-14s ",l->name);
-						fprintf(listing,"%-8d  ",l->memloc);
+						fprintf(listing,"%-7s ",l->name);
+						fprintf(listing,"%-7d ",walk->scope_level);
+						fprintf(listing,"%-7d ",l->memloc);
+
+						if(l->vpf == VAR)	fprintf(listing,"%-7s ", "Var");
+						else if(l->vpf == PARAM)	fprintf(listing,"%-7s ", "Param");
+						else fprintf(listing,"%-7s ", "Func");
+						
+						if(l->is_array == IS_ARRAY){
+							fprintf(listing,"%-7s ", "YES");
+							fprintf(listing,"%-7d ", l->arrsize);
+						}
+						else {
+							fprintf(listing,"%-7s ", "NO");
+							fprintf(listing,"%-7s ", "-");
+						}
+						
+						if(l->type == TYPE_INT)	fprintf(listing,"%-7s ", "int");
+						else if(l->type == TYPE_VOID)	fprintf(listing,"%-7s ", "void");
+						else fprintf(listing,"%-7s ", "array");
+
 						while (t != NULL)
 						{ fprintf(listing,"%4d ",t->lineno);
 							t = t->next;
@@ -253,6 +326,7 @@ void printSymTab(FILE * listing)
 					}
 				}
 			}
+			fprintf(listing,"\n");
 
 			// **** If sibling is exist, go this scope's sibling and find last child ****//
 			if (walk->sibling != NULL){
