@@ -188,7 +188,7 @@ int st_lookup_curr_scope( char * name){
 	else return l->memloc;
 }
 
-int st_lookup_data( char *name, int *isarray){
+int st_lookup_data( char *name, int *isarray, int *VPF){
 	int h = hash(name);
 
 	ScopeList search = curr_scope;
@@ -199,11 +199,12 @@ int st_lookup_data( char *name, int *isarray){
 		while((l != NULL) && (strcmp(name, l->name) != 0)){
 				l = l->next;		
 		}
-		
 		if(l == NULL && search->parent != NULL) { search = search->parent;}
 		else if (l == NULL && search->parent == NULL) { return -1; }
 		else {
+//				printf("[%s is array val = %d]", name, l->is_array);
 				*isarray = l->is_array;
+				*VPF = l->vpf;
 				return 1;
 		}	
 	}	
@@ -256,6 +257,7 @@ void st_make_new_scope(int csflag){
 	if(csflag >= 1){
 			temp->params = (ParamList)malloc(sizeof(struct ParamListRec));
 			temp->params->param_num = 1;
+//			printf("[%d]\n", csflag);
 			temp->params->type = csflag; 
 			temp->params->next = NULL;
 	}
@@ -269,6 +271,7 @@ void st_make_new_scope(int csflag){
 void st_attach_param(int csflag){
 	ParamList walk, tmp = (ParamList)malloc(sizeof(struct ParamListRec));
 	
+//	printf("[%d]\n", csflag);
 	walk = curr_scope->params;
 	while(walk->next != NULL){
 				walk = walk->next;
@@ -333,8 +336,14 @@ ParamList st_find_func_data(char * name, int *type){
 		if ( search->sibling != NULL){
 				search = search->sibling;
 		}
-		else break;
+
 	}
+	curr_scope = search;
+	while(curr_scope ->child != NULL){
+				curr_scope = curr_scope->child;
+//				printf("go down\n");
+	}
+
 
 	return search->params;
 }

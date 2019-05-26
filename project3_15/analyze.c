@@ -62,7 +62,7 @@ static void nullProc(TreeNode * t)
  */
 static void insertNode( TreeNode * t)
 { 
-			int isarr_flag, paramcheck_flag;
+			int isarr_flag, paramcheck_flag, VPF_flag;
 			static int main_location=-1, main_flag=0;
 			char err_msg[50];
 			char *func_name;
@@ -125,7 +125,7 @@ static void insertNode( TreeNode * t)
 
 					case IdarrayK:
 									
-									st_lookup_data((t->child[0])->attr.name, &isarr_flag);
+									st_lookup_data((t->child[0])->attr.name, &isarr_flag, &VPF_flag);
 									if (st_lookup((t->child[0])->attr.name) == -1){
 											typeError(t->child[0], "Error, No decl and used!");
 									}
@@ -148,15 +148,17 @@ static void insertNode( TreeNode * t)
 						if (first_param_flag == FALSE ){
 								first_param_flag = TRUE;
 
-								if (t->child[0]->type == Integer)
+								if (t->child[2] == NULL){
 										st_make_new_scope(PARAM_INT);
+								}
 								else if (t->child[2] != NULL){
 										st_make_new_scope(PARAM_ARRAY);
 								}
 						}
 						else{
-								if (t->child[0]->type == Integer)
+								if (t->child[2] == NULL){
 										st_attach_param(PARAM_INT);
+								}
 								else if (t->child[2] != NULL){
 										st_attach_param(PARAM_ARRAY);
 								}
@@ -173,11 +175,15 @@ static void insertNode( TreeNode * t)
 						break;
 
 					case CallK:
+								st_lookup_data(t->attr.name, &isarr_flag, &VPF_flag);
 								if (st_lookup(t->attr.name) == -1){
 											typeError(t, "Error, No decl and used!");
 								}
+								else if (VPF_flag != FUNC){
+											typeError(t, "Error, you can only call function!");
+								}
 								else{
-												st_insert(t->attr.name, t->lineno, 0, FUNC, NOT_ARRAY, 0, 0);
+											st_insert(t->attr.name, t->lineno, 0, FUNC, NOT_ARRAY, 0, 0);
 								}
 						break;
 
@@ -315,13 +321,13 @@ void buildSymtab(TreeNode * syntaxTree)
 
 	//////////////////////
 	traverse(syntaxTree,insertNode,nullProc);
-  
+/*  
 	if(!Error){
 		if (TraceAnalyze)
   	{ fprintf(listing,"\nSymbol table:\n\n");
     	printSymTab(listing);
   	}
-	}
+	}*/
 }
 
 static void typeError(TreeNode * t, char * message)
@@ -334,7 +340,7 @@ static void typeError(TreeNode * t, char * message)
  */
 static void checkNode(TreeNode * t)
 { 
-	int isarr_flag, func_type;
+	int isarr_flag, func_type, ret_err, VPF_flag;
 	int paramcheck_flag = 0;
 	char err_msg[50];
 	TreeNode *tmp;
@@ -350,9 +356,20 @@ static void checkNode(TreeNode * t)
 					break;
 
 				case SelectionK:
+		/*			if (t->child[0]->type != Boolean){
+								typeError(t, "Selection condition must have Boolean type.");
+					}*/
+					if (t->child[0]->type == Void || t->child[0]->type == Array){
+								typeError(t, "Selection condition must have Boolean or Integer type.");
+					}
+
+
 					break;
 
 				case IterationK:
+					if (t->child[0]->type == Void || t->child[0]->type == Array){
+								typeError(t, "Iteration condition must have Boolean or Integer type.");
+					}
 					break;
 
 				case ReturnK:
@@ -458,14 +475,39 @@ static void checkNode(TreeNode * t)
 				case CallK:
 
 					check_paramlist = st_find_func_data(t->attr.name, &func_type);
-
 					tmp = t->child[0];
+				
 
 					while (1){
-							if (tmp->type != check_paramlist->type){
+
+//							printf("[%s %d %d] ", tmp->attr.name, tmp->nodekind, tmp->kind.exp);
+							if (tmp->nodekind == ExpK && tmp->kind.exp == ConstK){
+										if (tmp->sibling == NULL)
+														break;
+										
+										tmp = tmp->sibling;
+										continue;
+							}
+							st_lookup_data(tmp->attr.name, &isarr_flag, &VPF_flag);
+
+							if (isarr_flag == IS_ARRAY){
+										tmp->type = Array;
+							}
+							else{
+										tmp->type = Integer;
+							}
+							if (tmp->sibling == NULL){
+									break;
+							}
+
+							tmp = tmp->sibling;
+					}
+					tmp = t->child[0];
+					while (1){
+//									printf("%d %d\n", tmp->type, check_paramlist->type);
+							if (tmp->type != check_paramlist->type){		// type error
 											paramcheck_flag = 1;
 											break;
-											// type error
 							}
 
 							if (tmp->sibling != NULL && check_paramlist->next != NULL){
@@ -475,10 +517,9 @@ static void checkNode(TreeNode * t)
 							else if (tmp->sibling == NULL && check_paramlist->next == NULL){
 										break;
 							}
-							else{
+							else{																				// count error
 										paramcheck_flag = 2;
 										break;
-										// count error flag
 							}
 							t->type = func_type;
 					}
@@ -513,6 +554,41 @@ static void checkNode(TreeNode * t)
 							break;
 
 					case FunK:
+							tmp = t->child[3]->child[1];
+							func_type = 0;
+							while(tmp!= NULL){
+										if (tmp->nodekind == StmtK && tmp->kind.stmt == ReturnK){
+												ret_err = 1;
+												if (tmp->child[0] != NULL){
+														if (tmp->child[0]->kind.exp == ConstK){
+																	func_type = Integer;
+														}
+														else if (tmp->child[0]->attr.name == NULL){
+																	func_type = tmp->child[0]->type;
+														}
+														else{
+																	st_lookup_data(tmp->child[0]->attr.name, &isarr_flag, &VPF_flag);
+																	func_type = isarr_flag;
+														}
+												}
+												else{
+														func_type = Void;
+												}
+
+										}
+										if (tmp->sibling == NULL)
+														break;
+										else{
+														tmp = tmp->sibling;
+										}
+							}
+							if (t->child[0]->type == Void && ret_err == 1){
+										typeError(t, "Function type is void, but it have return");
+							}
+	
+							if (t->child[0]->type != func_type){
+										typeError(t, "Function type and return type unmatched");
+							}
 							break;
 
 					case LocalK:
@@ -539,4 +615,12 @@ void typeCheck(TreeNode * syntaxTree)
 {
 			st_set_head();
 			traverse(syntaxTree,nullProc,checkNode);
+
+  
+	if(!Error){
+		if (TraceAnalyze)
+  	{ fprintf(listing,"\nSymbol table:\n\n");
+    	printSymTab(listing);
+  	}
+	}
 }

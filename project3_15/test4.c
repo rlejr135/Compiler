@@ -19,7 +19,7 @@ int func(int parA[], int parB){
 										i = 0;
 							else i = 1;
 		}
-		return parA[2];
+		return parA;
 }
 
 int crr[30];
@@ -39,10 +39,6 @@ void main(void){
 						two = arr[2];
 						while(arr[one] == brr[tmp]){
 									int tmp;
-									if (1){
-												int tmp;
-												tmp = one;
-									}
 						}
 						tmp = two;
 				}

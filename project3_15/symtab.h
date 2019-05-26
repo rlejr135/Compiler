@@ -49,7 +49,7 @@ void st_scope_go_child();
 int st_lookup_curr_scope(char * name);
 
 // **** Check symbol table and get data **** //
-int st_lookup_data(char * name, int *isarray);
+int st_lookup_data(char * name, int *isarray, int *VPF);
 
 void st_attach_param(int csflag);
 
@@ -79,9 +79,9 @@ ParamList st_find_func_data(char * name, int * type);
 #define IS_ARRAY 1
 #define NOT_ARRAY 0
 
-#define TYPE_INT 0
-#define TYPE_VOID 1
-#define TYPE_ARRAY 2
+#define TYPE_INT 1
+#define TYPE_VOID 0
+#define TYPE_ARRAY 3
 
 #define PARAM_INT 1
 #define PARAM_ARRAY 3

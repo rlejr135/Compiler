@@ -83,7 +83,8 @@ int main( int argc, char * argv[] )
     typeCheck(syntaxTree);
     if (TraceAnalyze) fprintf(listing,"\nType Checking Finished\n");
 	}
-  
+
+
 #if !NO_CODE
   if (! Error)
   { char * codefile;
