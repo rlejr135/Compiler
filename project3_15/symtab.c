@@ -98,8 +98,6 @@ void st_insert( char * name, int lineno, int loc, int VPF, int is_array, int arr
   BucketList l =  curr_scope->hashTable[h];
 	ScopeList walk = curr_scope;
 
-	printf("[%s] [%d]\n", name, lineno);
-
 	if (loc == 0){
 	while (1){
 		  while ((l != NULL) && (strcmp(name,l->name) != 0))
@@ -180,6 +178,7 @@ int st_lookup ( char * name )
 			else { return l->memloc; }
 	}
 }
+
 int st_lookup_curr_scope( char * name){
 	int h = hash(name);
 	BucketList l = curr_scope->hashTable[h];
@@ -277,11 +276,11 @@ void printSymTab(FILE * listing)
 						fprintf(listing,"%-7d ",l->memloc);
 
 						if(l->vpf == VAR)	fprintf(listing,"%-7s ", "Var");
-						else if(l->vpf == PARAM)	fprintf(listing,"%-7s ", "Param");
+						else if(l->vpf == PARAM)	fprintf(listing,"%-7s ", "Par");
 						else fprintf(listing,"%-7s ", "Func");
 						
 						if(l->is_array == IS_ARRAY){
-							fprintf(listing,"%-7s ", "YES");
+							fprintf(listing,"%-7s ", "Array");
 							fprintf(listing,"%-7d ", l->arrsize);
 						}
 						else {

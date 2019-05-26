@@ -11,7 +11,12 @@
 #include "analyze.h"
 
 /* counter for variable memory locations */
+extern int curr_scope_level;
+
 static int location = 0;
+static int location_up = 0;
+static int location_down = -4;
+static int location_func = -1;
 
 /* Procedure traverse is a generic recursive 
  * syntax tree traversal routine:
@@ -29,6 +34,7 @@ static void traverse( TreeNode * t,
     }
 		// **** If exit Compound stmt, scope level down **** //
 		if (t->nodekind == StmtK && t->kind.stmt == CompoundK ){
+				location_down = -4;
 				st_scope_back();
 		}
 
@@ -92,7 +98,10 @@ static void insertNode( TreeNode * t)
       	switch (t->kind.exp)
       	{ 
 					case IdK:
-          	if (st_lookup(t->attr.name) != -1){
+						if (st_lookup(t->attr.name) == -1){
+								typeError(t, "Error, No decl and used!\n");
+						}
+						else{
             		st_insert(t->attr.name,t->lineno,0, VAR, NOT_ARRAY, 0, TYPE_INT);
 						}
 
@@ -109,7 +118,7 @@ static void insertNode( TreeNode * t)
 
 					case IdarrayK:
 									if (st_lookup((t->child[0])->attr.name) == -1){
-											printf ("error, no dec and use\n");
+											typeError(t, "Error, No decl and used!\n");
 									}
 									else{
 											st_insert((t->child[0])->attr.name, (t->child[0])->lineno, 0, 0, 0, 0, 0);
@@ -129,10 +138,10 @@ static void insertNode( TreeNode * t)
 						}
 					
 
-						if (t->child[2] != NULL){ // array parameter
+						if (t->child[2] != NULL){ 		// array parameter
 								st_insert((t->child[1])->attr.name, (t->child[1])->lineno, 0, PARAM, IS_ARRAY, 0, TYPE_ARRAY);
 						}
-						else{
+						else{													//not array parameter
 								st_insert((t->child[1])->attr.name, (t->child[1])->lineno, 0, PARAM, NOT_ARRAY, 0, TYPE_INT);
 						}
 						
@@ -140,7 +149,7 @@ static void insertNode( TreeNode * t)
 
 					case CallK:
 								if (st_lookup(t->attr.name) == -1){
-											printf("error, no dec and use\n");
+											typeError(t, "Error, No decl and used!\n");
 								}
 								else{
 											st_insert(t->attr.name, t->lineno, 0, 0, 0, 0, 0);
@@ -158,40 +167,68 @@ static void insertNode( TreeNode * t)
 							case IntK:
 							case LocalK:
 									if (st_lookup_curr_scope((t->child[1])->attr.name) == -1){
-											st_insert((t->child[1])->attr.name, (t->child[1])->lineno, location++, VAR, NOT_ARRAY, 0, TYPE_INT);
+
+											if (t->child[2] == NULL){				// not array
+														if(curr_scope_level == 0){
+																location_up += 4;
+																st_insert((t->child[1])->attr.name, (t->child[1])->lineno, location_up, VAR, NOT_ARRAY, 0, TYPE_INT);
+														}
+														else{
+																location_down -= 4;
+																st_insert((t->child[1])->attr.name, (t->child[1])->lineno, location_down, VAR, NOT_ARRAY, 0, TYPE_INT);
+														}
+											}
+											else if (t->child[2] != NULL){	
+														location_down -= 4 * t->child[2]->attr.val;
+														st_insert((t->child[1])->attr.name, (t->child[1])->lineno, location_down , VAR, IS_ARRAY, (t->child[2])->attr.val, TYPE_ARRAY);
+											}
 									}
 									else{
+												typeError(t, "Already defined name!\n");
 									}
+
+
 									break;
 
 							case ArrayK:
 									if (st_lookup_curr_scope((t->child[1])->attr.name) == -1){
-											st_insert((t->child[1])->attr.name, (t->child[1])->lineno, location++, VAR, IS_ARRAY, (t->child[2])->attr.val, TYPE_ARRAY);
+											if(curr_scope_level == 0){
+												location_up += 4 * t->child[2]->attr.val;	//location for array (scope level == 0)
+												st_insert((t->child[1])->attr.name, (t->child[1])->lineno, location_up, VAR, IS_ARRAY, (t->child[2])->attr.val, TYPE_ARRAY);
+											}
+
+											else{
+												location_down -= 4 * t->child[2]->attr.val;	//location for array (scope level != 0)
+												st_insert((t->child[1])->attr.name, (t->child[1])->lineno, location_down, VAR, IS_ARRAY, (t->child[2])->attr.val, TYPE_ARRAY);
+											}
 									}
 									else{
+												typeError(t, "Already defined name!\n");
 									}
 									break;
 
 							case FunK:
 
 									if (st_lookup_curr_scope((t->child[1])->attr.name) == -1){
+											
+											//location for function at scope level 0
+											if(curr_scope_level == 0)
+															location_func++;
 
 											if (t->child[0]->type == Integer)
-												st_insert((t->child[1])->attr.name, (t->child[1])->lineno, location++, FUNC, NOT_ARRAY, 0, TYPE_INT);
+												st_insert((t->child[1])->attr.name, (t->child[1])->lineno, location_func, FUNC, NOT_ARRAY, 0, TYPE_INT);
+
 											else if (t->child[0]->type == Void)
-												st_insert((t->child[1])->attr.name, (t->child[1])->lineno, location++, FUNC, NOT_ARRAY, 0, TYPE_VOID);
+												st_insert((t->child[1])->attr.name, (t->child[1])->lineno, location_func, FUNC, NOT_ARRAY, 0, TYPE_VOID);
 									}
 									else{
-
+												typeError(t, "Already defined name!\n");
 									}
 
 									if (t->child[2]->child[0] != NULL)
 											func_flag = TRUE;
 
 									break;
-
-//							case LocalK:
-//									break;
 
 							default:
 									break;
@@ -203,6 +240,9 @@ static void insertNode( TreeNode * t)
       break;
   }
 }
+
+
+
 
 /* Function buildSymtab constructs the symbol 
  * table by preorder traversal of the syntax tree

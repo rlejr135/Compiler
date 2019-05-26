@@ -18,6 +18,7 @@ void buildSymtab(TreeNode *);
  */
 void typeCheck(TreeNode *);
 
+static void typeError(TreeNode * t, char * message);
 
 static int func_flag;
 static int first_param_flag;
