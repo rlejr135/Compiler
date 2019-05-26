@@ -297,6 +297,7 @@ var									: ID
 											{ 
 														$$ = newExpNode(IdK);
 														$$->attr.name = copyString(beforeToken);
+														$$->lineno = lineno;
 											}
 										| ID 
 											{

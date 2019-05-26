@@ -59,6 +59,12 @@ typedef struct BucketListRec
 /* the hash table */
 //static BucketList hashTable[SIZE];
 
+
+
+
+
+//**** add for proj3 ****//
+
 typedef struct ScopeListRec{
 			int scope_level;
 
@@ -67,9 +73,7 @@ typedef struct ScopeListRec{
 			struct ScopeListRec * parent;
 			struct ScopeListRec * sibling;
 			struct ScopeListRec * child;
-			
-			ParamList params;
-			char * name;
+
 			int visited;
 } * ScopeList;
 
@@ -79,6 +83,7 @@ ScopeList curr_scope;
 int curr_scope_level = 0;
 
 ///////////////////////////
+
 
 
 
@@ -189,6 +194,7 @@ int st_lookup_curr_scope( char * name){
 }
 
 int st_lookup_data( char *name, int *isarray){
+	printf("Into st lookup data name[%s]\n", name);
 	int h = hash(name);
 
 	ScopeList search = curr_scope;
@@ -200,9 +206,10 @@ int st_lookup_data( char *name, int *isarray){
 				l = l->next;		
 		}
 		
-		if(l == NULL && search->parent != NULL) { search = search->parent;}
-		else if (l == NULL && search->parent == NULL) { return -1; }
+		if(l == NULL && search->parent != NULL) {	printf("go up\n"); search = search->parent;}
+		else if (l == NULL && search->parent == NULL) { printf("cant find\n");return -1; }
 		else {
+				printf("array array\n");
 				*isarray = l->is_array;
 				return 1;
 		}	
@@ -243,41 +250,7 @@ void st_make_new_scope(int csflag){
 			temp->sibling = NULL;
 	}
 	temp->visited = FALSE;
-
-	if (glo_func_name != NULL){
-			temp->name = glo_func_name;
-			glo_func_name = NULL;
-//			printf("in scope [%s]\n", temp->name);
-	}
-	else{
-			temp->name = NULL;
-	}
-
-	if(csflag >= 1){
-			temp->params = (ParamList)malloc(sizeof(struct ParamListRec));
-			temp->params->param_num = 1;
-			temp->params->type = csflag; 
-			temp->params->next = NULL;
-	}
-	else{
-			temp->params = NULL;
-	}
-
 	curr_scope = temp;
-}
-
-void st_attach_param(int csflag){
-	ParamList walk, tmp = (ParamList)malloc(sizeof(struct ParamListRec));
-	
-	walk = curr_scope->params;
-	while(walk->next != NULL){
-				walk = walk->next;
-	}
-
-	tmp->type = csflag;
-	tmp->param_num = walk->param_num + 1;
-	tmp->next = NULL;
-	walk->next = tmp;
 }
 
 
@@ -296,6 +269,7 @@ void st_scope_back(){
 	if (curr_scope->parent != NULL){
 			curr_scope = curr_scope->parent;
 			curr_scope_level -= 1;
+			printf("scope back\n");
 	}
 }
 
@@ -307,41 +281,8 @@ void st_scope_go_child(){
 			}
 			curr_scope->visited = TRUE;
 			curr_scope_level += 1;
+			printf("find child, dddd\n");
 	}
-}
-
-ParamList st_find_func_data(char * name, int *type){
-		ScopeList search = head_scope;
- int h = hash(name);
-
-	while(1){
-			BucketList l =  search->hashTable[h];
-
-			while ((l != NULL) && (strcmp(name,l->name) != 0)){
-					l = l->next;
-			}
-			
-			if (l == NULL && search->child != NULL) { search = search->child; }
-			else {
-					*type = l->type;
-					break;
-			}
-	}
-
-	search = head_scope->child;
-	while (strcmp(search->name, name) != 0){
-		if ( search->sibling != NULL){
-				search = search->sibling;
-		}
-		else break;
-	}
-
-	return search->params;
-}
-
-
-void st_set_head(){
-		curr_scope = head_scope;
 }
 
 //////////////////////////

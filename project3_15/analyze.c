@@ -18,6 +18,10 @@ static int location_up = 0;
 static int location_down = -4;
 static int location_func = -1;
 
+
+ParamList check_paramlist, walk;
+
+
 /* Procedure traverse is a generic recursive 
  * syntax tree traversal routine:
  * it applies preProc in preorder and postProc 
@@ -58,12 +62,15 @@ static void nullProc(TreeNode * t)
  */
 static void insertNode( TreeNode * t)
 { 
+			int isarr_flag, paramcheck_flag;
+			static int main_location=-1, main_flag=0;
+			char err_msg[50];
+			char *func_name;
 	switch (t->nodekind){ 
 		case StmtK:
       	switch (t->kind.stmt)
       	{ 
 					case CompoundK:
-
 						if (func_flag == TRUE){
 								func_flag = FALSE;
 								first_param_flag = FALSE;
@@ -99,7 +106,7 @@ static void insertNode( TreeNode * t)
       	{ 
 					case IdK:
 						if (st_lookup(t->attr.name) == -1){
-								typeError(t, "Error, No decl and used!\n");
+								typeError(t, "Error, No decl and used!");
 						}
 						else{
             		st_insert(t->attr.name,t->lineno,0, VAR, NOT_ARRAY, 0, TYPE_INT);
@@ -117,8 +124,14 @@ static void insertNode( TreeNode * t)
 						break;
 
 					case IdarrayK:
+									
+									st_lookup_data((t->child[0])->attr.name, &isarr_flag);
 									if (st_lookup((t->child[0])->attr.name) == -1){
-											typeError(t, "Error, No decl and used!\n");
+											typeError(t->child[0], "Error, No decl and used!");
+									}
+									else if (isarr_flag == NOT_ARRAY){
+											sprintf(err_msg, "[%s] is not array variable.", t->child[0]->attr.name);
+											typeError(t->child[0], err_msg);
 									}
 									else{
 											st_insert((t->child[0])->attr.name, (t->child[0])->lineno, 0, 0, 0, 0, 0);
@@ -130,11 +143,23 @@ static void insertNode( TreeNode * t)
 						break;
 
 					case ParamK:
-						if (t->child[0] == NULL) break;
+						if (t->child[0] == NULL) { break;}
+//						printf("[%s]\n", glo_func_name);
 						if (first_param_flag == FALSE ){
 								first_param_flag = TRUE;
 
-								st_make_new_scope(0);
+								if (t->child[0]->type == Integer)
+										st_make_new_scope(PARAM_INT);
+								else if (t->child[2] != NULL){
+										st_make_new_scope(PARAM_ARRAY);
+								}
+						}
+						else{
+								if (t->child[0]->type == Integer)
+										st_attach_param(PARAM_INT);
+								else if (t->child[2] != NULL){
+										st_attach_param(PARAM_ARRAY);
+								}
 						}
 					
 
@@ -149,10 +174,10 @@ static void insertNode( TreeNode * t)
 
 					case CallK:
 								if (st_lookup(t->attr.name) == -1){
-											typeError(t, "Error, No decl and used!\n");
+											typeError(t, "Error, No decl and used!");
 								}
 								else{
-											st_insert(t->attr.name, t->lineno, 0, 0, 0, 0, 0);
+												st_insert(t->attr.name, t->lineno, 0, FUNC, NOT_ARRAY, 0, 0);
 								}
 						break;
 
@@ -184,7 +209,7 @@ static void insertNode( TreeNode * t)
 											}
 									}
 									else{
-												typeError(t, "Already defined name!\n");
+												typeError(t->child[1], "Already defined name!");
 									}
 
 
@@ -203,17 +228,50 @@ static void insertNode( TreeNode * t)
 											}
 									}
 									else{
-												typeError(t, "Already defined name!\n");
+												typeError(t->child[1], "Already defined name!");
 									}
 									break;
 
 							case FunK:
 
+									func_name = (char*)malloc(sizeof(char) * strlen(t->child[1]->attr.name));
+									strcpy(func_name, t->child[1]->attr.name);
+
+									glo_func_name = func_name;
+//									printf("[%s]\n", glo_func_name);
 									if (st_lookup_curr_scope((t->child[1])->attr.name) == -1){
 											
+											
 											//location for function at scope level 0
-											if(curr_scope_level == 0)
+											if(curr_scope_level == 0){
+													
+													//main function declaration
+													if(strcmp(t->child[1]->attr.name, "main") == 0){		  
+															
+															//main function must not be Void type
+															if(t->child[0]->type == Integer){
+																	typeError(t->child[1], "main function must be Void type");
+															}
+
+															//main function should not have parameters
+															else if(t->child[2]->child[0] != NULL){
+																	typeError(t->child[1], "main function should not have parameters");
+															}
+
+
+															else{
+																	main_flag = 1;
+																	main_location = location_func;
+															}
+													}
+													
+													//main function should be defined last
+													if(main_flag && (location_func > main_location))
+															typeError(t->child[1], "main function is not declared last");
+
+													else
 															location_func++;
+											}
 
 											if (t->child[0]->type == Integer)
 												st_insert((t->child[1])->attr.name, (t->child[1])->lineno, location_func, FUNC, NOT_ARRAY, 0, TYPE_INT);
@@ -222,7 +280,7 @@ static void insertNode( TreeNode * t)
 												st_insert((t->child[1])->attr.name, (t->child[1])->lineno, location_func, FUNC, NOT_ARRAY, 0, TYPE_VOID);
 									}
 									else{
-												typeError(t, "Already defined name!\n");
+												typeError(t, "Already defined name!");
 									}
 
 									if (t->child[2]->child[0] != NULL)
@@ -257,10 +315,13 @@ void buildSymtab(TreeNode * syntaxTree)
 
 	//////////////////////
 	traverse(syntaxTree,insertNode,nullProc);
-  if (TraceAnalyze)
-  { fprintf(listing,"\nSymbol table:\n\n");
-    printSymTab(listing);
-  }
+  
+	if(!Error){
+		if (TraceAnalyze)
+  	{ fprintf(listing,"\nSymbol table:\n\n");
+    	printSymTab(listing);
+  	}
+	}
 }
 
 static void typeError(TreeNode * t, char * message)
@@ -272,7 +333,12 @@ static void typeError(TreeNode * t, char * message)
  * type checking at a single tree node
  */
 static void checkNode(TreeNode * t)
-{ switch (t->nodekind)
+{ 
+	int isarr_flag, func_type;
+	int paramcheck_flag = 0;
+	char err_msg[50];
+	TreeNode *tmp;
+	switch (t->nodekind)
   { 
     case StmtK:
       switch (t->kind.stmt)
@@ -329,28 +395,102 @@ static void checkNode(TreeNode * t)
           break;
 				
 				case OpK:
-          if ((t->child[0]->type != Integer) ||
-              (t->child[1]->type != Integer))
-            typeError(t,"Op applied to non-integer");
-          if ((t->attr.op == EQ) || (t->attr.op == LT))
-            t->type = Boolean;
-          else
-            t->type = Integer;
+
+					if (t->child[0] == NULL) break;
+
+					if (t->child[0]->type != t->child[1]->type){
+								typeError(t, "Op applied to non-integer.");
+					}
+
+					if (t->attr.op == LE || t->attr.op == LT || t->attr.op == GT || t->attr.op == GE || t->attr.op == EQ || t->attr.op == NE){
+								t->type = Boolean;
+					}
+					else{
+								t->type = Integer;
+					}
+					
           break;
         
 				case ConstK:
+					t->type = Integer;
 					break;
 
 				case AssignK:
+					if (t->child[0]->type == Boolean && t->child[1]->type == Integer){			// assign type check
+								typeError(t->child[0], "Unmatched type between l-value and r-value.");
+					}
+
+					t->type = t->child[0]->type;
+
 					break;
 
 				case IdarrayK:
+					t->type = Integer;
+					if (t->child[1]->type != Integer){								// array index type check
+								typeError(t->child[0], "Array index error.");
+					}
+		/*			
+					st_lookup_data(t->child[0]->attr.name, &isarr_flag);
+					if (isarr_flag == NOT_ARRAY){
+								sprintf(err_msg, "[%s] is not array variable.", t->child[0]->attr.name);
+								typeError(t->child[0], err_msg);
+					}*/
 					break;
 
 				case TypeK:
 					break;
 
+				case ParamK:
+					if (t->type == Void) break;
+					if (t->child[0]->type == Void){									// Void type check.
+								typeError(t->child[1], "Unvalid Parameter type. Parameter must not have void type.");
+					}
+
+					if (t->child[2] == NULL){
+								t->type = Integer;
+					}
+					else if (t->child[2] != NULL){
+								t->type = Array;
+					}
+
+					break;
+
 				case CallK:
+
+					check_paramlist = st_find_func_data(t->attr.name, &func_type);
+
+					tmp = t->child[0];
+
+					while (1){
+							if (tmp->type != check_paramlist->type){
+											paramcheck_flag = 1;
+											break;
+											// type error
+							}
+
+							if (tmp->sibling != NULL && check_paramlist->next != NULL){
+										tmp = tmp->sibling;
+										check_paramlist = check_paramlist->next;
+							}
+							else if (tmp->sibling == NULL && check_paramlist->next == NULL){
+										break;
+							}
+							else{
+										paramcheck_flag = 2;
+										break;
+										// count error flag
+							}
+							t->type = func_type;
+					}
+					
+					if (paramcheck_flag == 1){				// When parameter type is dirrerent.
+								typeError(t, "Parameter type is different");
+					}
+					else if (paramcheck_flag == 2){		// When parameter count is different.
+								typeError(t, "Parameter count is different");
+					}
+
+
 					break;
 
         default:
@@ -361,15 +501,24 @@ static void checkNode(TreeNode * t)
 		case DecK:
 			switch(t->kind.dec){
 					case IntK:
+							if(t->child[0]->type == Void){								// Void type check.
+										typeError(t->child[1], "Unvalid variable type. Variable must not have void type.");
+							}
 							break;
 
 					case ArrayK:
+							if(t->child[0]->type == Void){								// Void type check.
+										typeError(t->child[1], "Unvalid variable type. Array Variable must not have void type.");
+							}
 							break;
 
 					case FunK:
 							break;
 
 					case LocalK:
+							if(t->child[0]->type == Void){								// Void type check.
+										typeError(t->child[1], "Unvalid variable type. Variable must not have void type.");
+							}
 							break;
 
 					default:
@@ -387,5 +536,7 @@ static void checkNode(TreeNode * t)
  * by a postorder syntax tree traversal
  */
 void typeCheck(TreeNode * syntaxTree)
-{ traverse(syntaxTree,nullProc,checkNode);
+{
+			st_set_head();
+			traverse(syntaxTree,nullProc,checkNode);
 }

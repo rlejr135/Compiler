@@ -39,14 +39,38 @@ void st_make_new_scope(int csflag);
 // make head scope
 void st_scope_init();
 
-
-// **** scope go back(go now scope's parent) **** //
+// **** scope go back(go current scope's parent) **** //
 void st_scope_back();
 
-// **** go now scope's child **** //
+// **** go to child scope **** //
+void st_scope_go_child();
 
+// **** go now scope's child **** //
 int st_lookup_curr_scope(char * name);
 
+// **** Check symbol table and get data **** //
+int st_lookup_data(char * name, int *isarray);
+
+void st_attach_param(int csflag);
+
+//int st_check_arg_param(TreeNode *t);
+
+void st_set_head();
+
+
+
+char * glo_func_name;
+
+typedef struct ParamListRec{
+			int param_num;
+			int type;
+			struct ParamListRec * next;
+} * ParamList;
+
+ParamList st_find_func_data(char * name, int * type);
+
+#define TRUE 1
+#define FALSE 0
 
 #define VAR 0
 #define PARAM 1
@@ -59,6 +83,8 @@ int st_lookup_curr_scope(char * name);
 #define TYPE_VOID 1
 #define TYPE_ARRAY 2
 
+#define PARAM_INT 1
+#define PARAM_ARRAY 3
 
 /////////////////////////
 

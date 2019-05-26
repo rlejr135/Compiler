@@ -19,7 +19,6 @@ int func(int parA[], int parB){
 										i = 0;
 							else i = 1;
 		}
-
 		return parA[2];
 }
 
@@ -48,5 +47,5 @@ void main(void){
 						tmp = two;
 				}
 		}
-		tmp = func(arr, 45);
+		tmp = func(arr, arr);
 }
