@@ -69,6 +69,13 @@ typedef struct ParamListRec{
 
 ParamList st_find_func_data(char * name, int * type);
 
+
+// **** when CallK, save now scope ****//
+void set_call_scope();
+void get_call_scope();
+
+void st_param_loc_up();
+
 #define TRUE 1
 #define FALSE 0
 

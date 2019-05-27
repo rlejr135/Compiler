@@ -57,7 +57,6 @@ typedef struct BucketListRec
    } * BucketList;
 
 /* the hash table */
-//static BucketList hashTable[SIZE];
 
 typedef struct ScopeListRec{
 			int scope_level;
@@ -75,6 +74,10 @@ typedef struct ScopeListRec{
 
 ScopeList head_scope;
 ScopeList curr_scope;
+
+ScopeList for_call_scope[100];
+static int now_call_save_level = 0;
+static int now_call_get_level = 0;
 
 int curr_scope_level = 0;
 
@@ -155,6 +158,8 @@ void st_insert( char * name, int lineno, int loc, int VPF, int is_array, int arr
 /* Function st_lookup returns the memory 
  * location of a variable or -1 if not found
  */
+
+// **** lookup my, and my parent scope **** //
 int st_lookup ( char * name )
 { int h = hash(name);
 
@@ -176,6 +181,7 @@ int st_lookup ( char * name )
 	}
 }
 
+// **** lookup only current scope **** //
 int st_lookup_curr_scope( char * name){
 	int h = hash(name);
 	BucketList l = curr_scope->hashTable[h];
@@ -193,6 +199,7 @@ int st_lookup_data( char *name, int *isarray, int *VPF){
 
 	ScopeList search = curr_scope;
 
+	// **** find scope and check it's data type and array **** //
 	while(1){
 				BucketList l = search->hashTable[h];
 
@@ -202,10 +209,9 @@ int st_lookup_data( char *name, int *isarray, int *VPF){
 		if(l == NULL && search->parent != NULL) { search = search->parent;}
 		else if (l == NULL && search->parent == NULL) { return -1; }
 		else {
-//				printf("[%s is array val = %d]", name, l->is_array);
 				*isarray = l->is_array;
 				*VPF = l->vpf;
-				return 1;
+				return l->type;
 		}	
 	}	
 }
@@ -248,16 +254,15 @@ void st_make_new_scope(int csflag){
 	if (glo_func_name != NULL){
 			temp->name = glo_func_name;
 			glo_func_name = NULL;
-//			printf("in scope [%s]\n", temp->name);
 	}
 	else{
 			temp->name = NULL;
 	}
 
+	// **** for parameter type checking. **** //
 	if(csflag >= 1){
 			temp->params = (ParamList)malloc(sizeof(struct ParamListRec));
 			temp->params->param_num = 1;
-//			printf("[%d]\n", csflag);
 			temp->params->type = csflag; 
 			temp->params->next = NULL;
 	}
@@ -268,10 +273,10 @@ void st_make_new_scope(int csflag){
 	curr_scope = temp;
 }
 
+// **** for parameter check, attach parameter **** //
 void st_attach_param(int csflag){
 	ParamList walk, tmp = (ParamList)malloc(sizeof(struct ParamListRec));
 	
-//	printf("[%d]\n", csflag);
 	walk = curr_scope->params;
 	while(walk->next != NULL){
 				walk = walk->next;
@@ -294,7 +299,7 @@ void st_scope_init(){
 	curr_scope = head_scope;
 }
 
-
+// **** go parent scope **** //
 void st_scope_back(){
 	if (curr_scope->parent != NULL){
 			curr_scope = curr_scope->parent;
@@ -317,6 +322,7 @@ ParamList st_find_func_data(char * name, int *type){
 		ScopeList search = head_scope;
  int h = hash(name);
 
+ // **** find what function type is **** //
 	while(1){
 			BucketList l =  search->hashTable[h];
 
@@ -331,6 +337,7 @@ ParamList st_find_func_data(char * name, int *type){
 			}
 	}
 
+	// **** find where function scope is **** //
 	search = head_scope->child;
 	while (strcmp(search->name, name) != 0){
 		if ( search->sibling != NULL){
@@ -341,14 +348,35 @@ ParamList st_find_func_data(char * name, int *type){
 	curr_scope = search;
 	while(curr_scope ->child != NULL){
 				curr_scope = curr_scope->child;
-//				printf("go down\n");
 	}
 
 
 	return search->params;
 }
 
+void set_call_scope(){
+	for_call_scope[now_call_save_level++] = curr_scope;	
+}
 
+void get_call_scope(){
+		curr_scope = for_call_scope[now_call_get_level++];
+}
+
+void st_param_loc_up(){
+	BucketList l;
+	int i;
+
+	for (i = 0 ; i < SIZE ; i++){
+			l = curr_scope->hashTable[i];
+			while (l!= NULL){
+						l->memloc += 4;
+						l = l->next;
+			}
+	}
+
+}
+
+// **** do not use **** //
 void st_set_head(){
 		curr_scope = head_scope;
 }
