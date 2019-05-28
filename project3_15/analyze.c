@@ -329,13 +329,13 @@ void buildSymtab(TreeNode * syntaxTree)
 
 	//////////////////////
 	traverse(syntaxTree,insertNode,nullProc);
-/*  
+  
 	if(!Error){
 		if (TraceAnalyze)
   	{ fprintf(listing,"\nSymbol table:\n\n");
     	printSymTab(listing);
   	}
-	}*/
+	}
 }
 
 static void typeError(TreeNode * t, char * message)
@@ -610,11 +610,11 @@ void typeCheck(TreeNode * syntaxTree)
 			st_set_head();
 			traverse(syntaxTree,nullProc,checkNode);
 
-  
+ /* 
 	if(!Error){
 		if (TraceAnalyze)
   	{ fprintf(listing,"\nSymbol table:\n\n");
     	printSymTab(listing);
   	}
-	}
+	}*/
 }
