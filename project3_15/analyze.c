@@ -181,6 +181,10 @@ static void insertNode( TreeNode * t)
 						break;
 
 					case CallK:
+							if (strcmp(t->attr.name, "output") == 0 || strcmp(t->attr.name, "input") == 0){
+								break;
+							}
+							
 								set_call_scope();
 								st_lookup_data(t->attr.name, &isarr_flag, &VPF_flag);
 								if (st_lookup(t->attr.name) == -1){
@@ -250,6 +254,7 @@ static void insertNode( TreeNode * t)
 
 							case FunK:
 
+									location_down = -4;
 									func_name = (char*)malloc(sizeof(char) * strlen(t->child[1]->attr.name));
 									strcpy(func_name, t->child[1]->attr.name);
 
@@ -456,6 +461,10 @@ static void checkNode(TreeNode * t)
 					break;
 
 				case CallK:
+					if (strcmp(t->attr.name, "output") == 0 || strcmp(t->attr.name, "input") == 0){
+						break;
+					}
+
 					check_paramlist = st_find_func_data(t->attr.name, &func_type);
 					get_call_scope();
 					tmp = t->child[0];
